@@ -1,0 +1,652 @@
+\documentclass[11pt]{article}
+
+% --- Packages ---
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{listings}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
+\usepackage{xcolor}
+\usepackage[shortlabels]{enumitem}
+\usepackage{fancyhdr}
+
+% --- Page style ---
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{CS 6083 -- Spring 2026}
+\rhead{Problem Set \#3}
+\cfoot{\thepage}
+
+% --- Listings configuration ---
+\lstset{
+  language=SQL,
+  basicstyle=\small\ttfamily,
+  keywordstyle=\bfseries\color{blue},
+  commentstyle=\color{green!50!black},
+  stringstyle=\color{red!70!black},
+  showstringspaces=false,
+  breaklines=true,
+  frame=single,
+  numbers=none,
+  tabsize=2,
+  morekeywords={SERIAL,NUMERIC,VARCHAR,BOOLEAN,REFERENCES,PARTITION,OVER,RANK,TRIGGER,
+    FUNCTION,RETURNS,LANGUAGE,plpgsql,EXECUTE,AFTER,BEFORE,EACH,ROW,STATEMENT,
+    RETURN,BEGIN,END,NEW,OLD,IF,THEN,ELSE,ELSIF,LOOP,WHILE,FOR,DECLARE,
+    CONFLICT,NOTHING,ILIKE,SIMILAR,LATERAL,RECURSIVE,MATERIALIZED,VIEW,
+    REPLACE,CASCADE,RESTRICT,TRUNCATE,EXCEPT,INTERSECT,
+    INFORMATION_SCHEMA,TABLE_CONSTRAINTS,KEY_COLUMN_USAGE,CONSTRAINT_COLUMN_USAGE,
+    COLUMNS,REFERENTIAL_CONSTRAINTS}
+}
+
+% --- Title ---
+\title{\textbf{Problem Set \#3} \\ CS 6083 -- Principles of Database Systems \\ Spring 2026}
+\author{Ronit Tushir}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\noindent\textit{Note: The SQL files for Question 4 (\texttt{hw3\_q4.sql}) and output log (\texttt{hw3\_q4\_output.txt}) are submitted alongside this PDF. All queries were executed via \texttt{psql} on PostgreSQL 14. The GitHub repository for Question 1 is linked below.}
+
+%=============================================================================
+% PROBLEM 1
+%=============================================================================
+\section{Airline Flights and Booking -- Web Application}
+
+The web application was built using Python (Flask) with PostgreSQL as the backend, using the same schema and data from HW2.
+
+\medskip
+\noindent\textbf{GitHub Repository:} \url{https://github.com/ronitios96/pds-flights-app}
+
+\subsection{Overview}
+
+The application supports three pages:
+
+\begin{enumerate}[(a)]
+  \item \textbf{Search Page} -- A form where users enter source and destination airport codes and select a date range (start and end dates). Submitting the form triggers a search.
+
+  \item \textbf{Results Page} -- Displays all flights matching the given route and date range, showing flight number, departure date, origin code, destination code, and departure time. Flights are shown regardless of whether they are fully booked.
+
+  \item \textbf{Flight Detail Page} -- Clicking on a flight shows the aircraft capacity and the number of available seats for that specific flight number and departure date combination. Available seats are computed as capacity minus the number of bookings.
+\end{enumerate}
+
+\subsection{Implementation Details}
+
+\begin{itemize}
+  \item \textbf{Backend:} Flask (Python), connecting to PostgreSQL via \texttt{psycopg2}.
+  \item \textbf{Database:} The \texttt{hw2\_q2} database with the same tables (Airport, Aircraft, FlightService, Flight, Passenger, Booking) and data from HW2.
+  \item \textbf{Key queries:}
+  \begin{itemize}
+    \item Search joins \texttt{Flight} with \texttt{FlightService} on \texttt{flight\_number}, filtering by origin/destination codes and date range.
+    \item Seat availability joins \texttt{Flight} with \texttt{Aircraft} to get capacity, and counts rows in \texttt{Booking} for the given flight and date.
+  \end{itemize}
+\end{itemize}
+
+%=============================================================================
+% PROBLEM 2
+%=============================================================================
+\section{Normal Forms}
+
+Given: $R = \{C, D, E, H, G, J\}$ with functional dependencies:
+\[
+F = \{G \to C,\; D \to CE,\; H \to JEG,\; E \to H,\; H \to J,\; C \to E\}
+\]
+
+%-----------------------------------------------------------------------------
+\subsection{(a) Candidate Keys}
+
+To find candidate keys, I need to figure out which attributes can determine all of $R = \{C, D, E, H, G, J\}$.
+
+\medskip
+\noindent\textbf{Step 1: Check which attributes never appear on the right side of any FD.}
+
+Right-hand sides across all FDs: $\{C, E, J, G, H\}$.
+
+So $D$ never appears on the right side of any FD. This means $D$ must be in every candidate key (since no other attribute can derive $D$).
+
+Similarly, $G$ appears on the right only in $H \to JEG$, and $D$ doesn't determine $G$ directly -- let me check if $D$ alone can reach everything.
+
+\medskip
+\noindent\textbf{Step 2: Compute $\{D\}^+$.}
+\begin{itemize}
+  \item Start: $\{D\}$
+  \item $D \to CE$: $\{D, C, E\}$
+  \item $C \to E$: already have $E$
+  \item $E \to H$: $\{D, C, E, H\}$
+  \item $H \to JEG$: $\{D, C, E, H, J, G\}$
+\end{itemize}
+$\{D\}^+ = \{C, D, E, G, H, J\} = R$. So $D$ alone determines everything.
+
+\medskip
+\noindent\textbf{Step 3: Check if $D$ is minimal.}
+
+$D$ is a single attribute, so it can't be reduced further.
+
+\medskip
+\noindent\textbf{Conclusion:} The only candidate key is $\boxed{\{D\}}$.
+
+\medskip
+\noindent (I verified that no other single attribute works: $\{G\}^+ = \{G,C,E,H,J\}$ -- missing $D$. $\{C\}^+ = \{C,E,H,J,G\}$ -- missing $D$. $\{E\}^+ = \{E,H,J,G,C\}$ -- missing $D$. $\{H\}^+ = \{H,J,E,G,C\}$ -- missing $D$. $\{J\}^+ = \{J\}$ -- missing everything. So $D$ is the unique candidate key.)
+
+%-----------------------------------------------------------------------------
+\subsection{(b) Canonical Cover}
+
+Starting with $F = \{G \to C,\; D \to CE,\; H \to JEG,\; E \to H,\; H \to J,\; C \to E\}$.
+
+\medskip
+\noindent\textbf{Step 1: Decompose into singleton right-hand sides.}
+\[
+F_1 = \{G \to C,\; D \to C,\; D \to E,\; H \to J,\; H \to E,\; H \to G,\; E \to H,\; H \to J,\; C \to E\}
+\]
+There's a duplicate $H \to J$, so:
+\[
+F_1 = \{G \to C,\; D \to C,\; D \to E,\; H \to J,\; H \to E,\; H \to G,\; E \to H,\; C \to E\}
+\]
+
+\medskip
+\noindent\textbf{Step 2: Check for extraneous attributes on left sides.}
+
+All left-hand sides are single attributes, so nothing to remove here.
+
+\medskip
+\noindent\textbf{Step 3: Check for redundant FDs.}
+
+For each FD, I check if it can be derived from the remaining ones:
+
+\begin{itemize}
+  \item $G \to C$: Remove it. Can we derive $C$ from $\{G\}$ using the rest? $\{G\}^+ = \{G\}$ (nothing else has $G$ on the LHS). No, we can't. \textbf{Keep.}
+
+  \item $D \to C$: Remove it. $\{D\}^+$ using $\{G \to C, D \to E, H \to J, H \to E, H \to G, E \to H, C \to E\}$: $D \to E \to H \to G \to C$. We get $C$. \textbf{Redundant -- remove.}
+
+  \item $D \to E$: Remove it. $\{D\}^+$ using $\{G \to C, H \to J, H \to E, H \to G, E \to H, C \to E\}$: $\{D\}^+ = \{D\}$. Can't derive anything. \textbf{Keep.}
+
+  \item $H \to J$: Remove it. $\{H\}^+$ using $\{G \to C, D \to E, H \to E, H \to G, E \to H, C \to E\}$: $H \to E, H \to G \to C$. We get $\{H, E, G, C\}$ but not $J$. \textbf{Keep.}
+
+  \item $H \to E$: Remove it. $\{H\}^+$ using $\{G \to C, D \to E, H \to J, H \to G, E \to H, C \to E\}$: $H \to G \to C \to E$. We get $E$. \textbf{Redundant -- remove.}
+
+  \item $H \to G$: Remove it. $\{H\}^+$ using $\{G \to C, D \to E, H \to J, E \to H, C \to E\}$: $\{H\}^+ = \{H, J\}$. Can't reach $G$. \textbf{Keep.}
+
+  \item $E \to H$: Remove it. $\{E\}^+$ using $\{G \to C, D \to E, H \to J, H \to G, C \to E\}$: $\{E\}^+ = \{E\}$. Can't reach $H$. \textbf{Keep.}
+
+  \item $C \to E$: Remove it. $\{C\}^+$ using $\{G \to C, D \to E, H \to J, H \to G, E \to H\}$: $\{C\}^+ = \{C\}$. Can't reach $E$. \textbf{Keep.}
+\end{itemize}
+
+\medskip
+\noindent\textbf{Step 4: Recombine.}
+
+Grouping by left-hand side:
+\[
+F_c = \{G \to C,\; D \to E,\; H \to JG,\; E \to H,\; C \to E\}
+\]
+
+This is our canonical cover: $\boxed{F_c = \{G \to C,\; D \to E,\; H \to JG,\; E \to H,\; C \to E\}}$
+
+%-----------------------------------------------------------------------------
+\subsection{(c) BCNF Check}
+
+A schema is in BCNF if for every non-trivial FD $X \to Y$, $X$ is a superkey.
+
+The only candidate key is $\{D\}$. Let's check each FD in $F_c$:
+
+\begin{itemize}
+  \item $G \to C$: $G$ is not a superkey ($\{G\}^+ = \{G,C,E,H,J\} \neq R$). \textbf{Violates BCNF.}
+  \item $D \to E$: $D$ is a superkey. OK.
+  \item $H \to JG$: $H$ is not a superkey ($\{H\}^+$ is missing $D$). Violates BCNF.
+  \item $E \to H$: $E$ is not a superkey. Violates BCNF.
+  \item $C \to E$: $C$ is not a superkey. Violates BCNF.
+\end{itemize}
+
+\textbf{The schema is NOT in BCNF.}
+
+\medskip
+\noindent\textbf{BCNF Decomposition:}
+
+I'll use the standard algorithm -- pick a violating FD, decompose, repeat.
+
+\medskip
+\noindent\textbf{Round 1:} Take $G \to C$ (violates BCNF).
+\begin{itemize}
+  \item $R_1 = \{G, C\}$ with FD $\{G \to C\}$. Key: $G$. In BCNF.
+  \item $R' = R - \{C\} = \{D, E, G, H, J\}$. Project FDs onto $R'$: since $C$ is removed, $C \to E$ drops. We still have $D \to E$, $E \to H$, $H \to JG$ (all attributes still in $R'$). Also from $G \to C \to E$ we already have $G$ and $E$ in $R'$, but the dependency was through $C$. Let me compute: $\{G\}^+$ in original = $\{G,C,E,H,J\}$, intersected with $R'$ gives $\{G,E,H,J\}$, so $G \to E$ holds on $R'$. But $E \to H \to G$ already gives us this, so $G \to E$ is redundant given $\{E \to H, H \to G\}$.
+
+  FDs on $R'$: $\{D \to E,\; E \to H,\; H \to JG\}$.
+\end{itemize}
+
+\noindent\textbf{Round 2:} In $R' = \{D, E, G, H, J\}$ with $\{D \to E, E \to H, H \to JG\}$. Key is $D$ ($D \to E \to H \to JG$, so $\{D\}^+ = R'$). Take $E \to H$ (violates BCNF since $\{E\}^+$ on $R'$ = $\{E,H,J,G\}$, missing $D$).
+\begin{itemize}
+  \item $R_2 = \{E, H, J, G\}$ with FDs $\{E \to H, H \to JG\}$. Key: $E$ ($\{E\}^+ = \{E,H,J,G\} = R_2$). Check: $H \to JG$, is $H$ a superkey? $\{H\}^+ = \{H,J,G\}$, missing $E$. Violates BCNF.
+  \item $R'' = R' - \{H, J, G\} \cup \{E\} = \{D, E\}$ with FD $\{D \to E\}$. Key: $D$. In BCNF.
+\end{itemize}
+
+\noindent\textbf{Round 3:} In $R_2 = \{E, H, J, G\}$ with $\{E \to H, H \to JG\}$. Take $H \to JG$.
+\begin{itemize}
+  \item $R_3 = \{H, J, G\}$ with FD $\{H \to JG\}$. Key: $H$. In BCNF.
+  \item $R_4 = \{E, H\}$ with FD $\{E \to H\}$. Key: $E$. In BCNF.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Final BCNF decomposition:}
+\[
+\boxed{R_1 = \{G, C\},\quad R_2 = \{D, E\},\quad R_3 = \{H, J, G\},\quad R_4 = \{E, H\}}
+\]
+
+%-----------------------------------------------------------------------------
+\subsection{(d) Dependency Preservation}
+
+We need to check if all FDs in $F_c$ can be verified using only attributes within a single decomposed relation.
+
+\begin{itemize}
+  \item $G \to C$: $G, C$ both in $R_1 = \{G, C\}$. \checkmark
+  \item $D \to E$: $D, E$ both in $R_2 = \{D, E\}$. \checkmark
+  \item $H \to JG$: $H, J, G$ all in $R_3 = \{H, J, G\}$. \checkmark
+  \item $E \to H$: $E, H$ both in $R_4 = \{E, H\}$. \checkmark
+  \item $C \to E$: $C$ is in $R_1$ and $E$ is in $R_2$ and $R_4$, but no single relation contains both $C$ and $E$. \textbf{Not directly preserved.}
+\end{itemize}
+
+We need to check if $C \to E$ can be inferred from the projected FDs. Using the closure test for dependency preservation: compute $\{C\}^+$ under the projected FDs.
+\begin{itemize}
+  \item Start with $\{C\}$.
+  \item In $R_1 = \{G,C\}$: $\{C\} \cap R_1 = \{C\}$, and $\{C\}^+$ restricted to $R_1$ gives $\{C\}$ (the only FD is $G \to C$, which doesn't fire). No change.
+  \item No relation contains $C$ with any FD that has $C$ on the LHS.
+\end{itemize}
+$\{C\}^+$ under projected FDs = $\{C\}$, which doesn't include $E$.
+
+\textbf{The BCNF decomposition is NOT dependency-preserving} (we lose $C \to E$).
+
+\medskip
+\noindent\textbf{3NF Decomposition:}
+
+Using the synthesis algorithm with $F_c = \{G \to C, D \to E, H \to JG, E \to H, C \to E\}$:
+
+\begin{enumerate}
+  \item Create a relation for each FD in the canonical cover:
+  \begin{itemize}
+    \item $S_1 = \{G, C\}$ -- key $G$
+    \item $S_2 = \{D, E\}$ -- key $D$
+    \item $S_3 = \{H, J, G\}$ -- key $H$
+    \item $S_4 = \{E, H\}$ -- key $E$
+    \item $S_5 = \{C, E\}$ -- key $C$
+  \end{itemize}
+  \item Check if any relation contains a candidate key of $R$. $S_2 = \{D, E\}$ contains $D$, which is the candidate key. Good, no extra relation needed.
+  \item Remove any $S_i$ that is a subset of another. None are subsets here.
+\end{enumerate}
+
+\noindent\textbf{Final 3NF decomposition:}
+\[
+\boxed{S_1 = \{G, C\},\; S_2 = \{D, E\},\; S_3 = \{H, J, G\},\; S_4 = \{E, H\},\; S_5 = \{C, E\}}
+\]
+
+This preserves all dependencies (each FD is contained within one relation) and is lossless (since $S_2$ contains the candidate key $D$).
+
+%=============================================================================
+% PROBLEM 3
+%=============================================================================
+\section{Normal Forms on a Real Schema}
+
+Given the schema:
+
+\smallskip
+\noindent\texttt{FlightSchema}(\underline{flight\_number}, airline\_name, origin\_code, origin\_city, origin\_state, origin\_country, dest\_code, dest\_city, dest\_state, dest\_country, departure\_time, duration, ticketPrice, plane\_type, capacity)
+
+\smallskip
+\noindent With assumptions:
+\begin{enumerate}[(i)]
+  \item origin\_code and dest\_code are airport codes
+  \item unique airport name, city, and state for each airport\_code
+  \item country can be inferred from city and state
+  \item single price per flight stored
+  \item flights between the same cities must have the same price
+  \item capacity is determined by plane\_type
+\end{enumerate}
+
+%-----------------------------------------------------------------------------
+\subsection{(a) Why the Single-Table Design is Not Optimal}
+
+This schema has several problems:
+
+\begin{itemize}
+  \item \textbf{Redundancy:} Airport information (city, state, country) is repeated for every flight using that airport, both as origin and destination. Similarly, the capacity is stored with every flight even though it only depends on the plane type. The ticket price is repeated for all flights between the same pair of cities.
+
+  \item \textbf{Update anomalies:} If Chicago's state name changed (hypothetically), we'd have to update every row where origin\_city or dest\_city is Chicago. If we miss some, the database becomes inconsistent. Same for capacity -- if we update the capacity of a Boeing 737, we'd need to touch every flight row using that plane type.
+
+  \item \textbf{Insertion anomalies:} We can't store a new airport (with its city, state, country) unless there's a flight associated with it. Similarly, we can't record a new plane type and its capacity without creating a flight.
+
+  \item \textbf{Deletion anomalies:} If we delete the only flight going to some airport, we lose that airport's information entirely. Deleting the last flight using a certain plane type means we lose the capacity info for that type.
+\end{itemize}
+
+%-----------------------------------------------------------------------------
+\subsection{(b) Functional Dependencies}
+
+Let me use shorter names: FN = flight\_number, AN = airline\_name, OC = origin\_code, OCI = origin\_city, OS = origin\_state, OCO = origin\_country, DC = dest\_code, DCI = dest\_city, DS = dest\_state, DCO = dest\_country, DT = departure\_time, DU = duration, TP = ticketPrice, PT = plane\_type, CAP = capacity.
+
+\medskip
+\noindent From the assumptions and the nature of the schema:
+
+\begin{enumerate}
+  \item $\text{FN} \to \text{AN, OC, DC, DT, DU, PT, TP}$ \\
+  (flight\_number is the primary key, so it determines all single-valued attributes of a flight -- airline, route, time, duration, plane type. Also price since assumption (iv) says single price per flight.)
+
+  \item $\text{OC} \to \text{OCI, OS}$ \\
+  (assumption (ii): each airport code determines a unique city and state)
+
+  \item $\text{DC} \to \text{DCI, DS}$ \\
+  (same as above but for destination)
+
+  \item $\text{OCI, OS} \to \text{OCO}$ \\
+  (assumption (iii): country is inferred from city + state)
+
+  \item $\text{DCI, DS} \to \text{DCO}$ \\
+  (same for destination)
+
+  \item $\text{OCI, OS, DCI, DS} \to \text{TP}$ \\
+  (assumption (v): flights between same cities have same price. We use (city, state) pairs rather than city alone because assumption (iii) implies city names aren't globally unique -- it requires both city and state to infer the country. So ``same city'' really means same (city, state) pair.)
+
+  \item $\text{PT} \to \text{CAP}$ \\
+  (assumption (vi): capacity determined by plane type)
+\end{enumerate}
+
+\medskip
+\noindent\textbf{Discussion on assumptions (i) and (ii):}
+
+Assumptions (i) and (ii) are a bit tricky because the schema uses origin\_code and dest\_code, which are both airport codes but refer to different roles. In a normalized design, they'd both reference the same Airport table. For functional dependencies, we have to write separate FDs for origin and destination attributes (FDs 2--3 and 4--5 above), even though they follow the same logic -- an airport code determines its city/state, and a city/state determines the country.
+
+The subtlety is that we can't write a single FD like ``airport\_code $\to$ city, state'' because the schema has two copies of these attributes (one for origin, one for destination). So we treat them independently: OC determines OCI/OS, and DC determines DCI/DS. This is essentially the same real-world constraint applied to two different columns.
+
+%-----------------------------------------------------------------------------
+\subsection{(c) Candidate Keys}
+
+Starting with FN:
+
+$\{\text{FN}\}^+$:
+\begin{itemize}
+  \item FN $\to$ AN, OC, DC, DT, DU, PT, TP: $\{\text{FN, AN, OC, DC, DT, DU, PT, TP}\}$
+  \item OC $\to$ OCI, OS: $\{+ \text{OCI, OS}\}$
+  \item DC $\to$ DCI, DS: $\{+ \text{DCI, DS}\}$
+  \item OCI, OS $\to$ OCO: $\{+ \text{OCO}\}$
+  \item DCI, DS $\to$ DCO: $\{+ \text{DCO}\}$
+  \item PT $\to$ CAP: $\{+ \text{CAP}\}$
+\end{itemize}
+
+$\{\text{FN}\}^+ = \{\text{FN, AN, OC, OCI, OS, OCO, DC, DCI, DS, DCO, DT, DU, TP, PT, CAP}\} = R$.
+
+Since FN is a single attribute and its closure is all of $R$, it's minimal.
+
+No other single attribute can be a key: none of them determine FN (it doesn't appear on the right side of any FD).
+
+\medskip
+\noindent\textbf{The only candidate key is $\boxed{\{\text{flight\_number}\}}$.}
+
+%-----------------------------------------------------------------------------
+\subsection{(d) Canonical Cover}
+
+Starting with $F$:
+\begin{align*}
+&\text{FN} \to \text{AN},\; \text{FN} \to \text{OC},\; \text{FN} \to \text{DC},\; \text{FN} \to \text{DT},\; \text{FN} \to \text{DU},\; \text{FN} \to \text{PT},\; \text{FN} \to \text{TP}, \\
+&\text{OC} \to \text{OCI},\; \text{OC} \to \text{OS}, \\
+&\text{DC} \to \text{DCI},\; \text{DC} \to \text{DS}, \\
+&\text{OCI, OS} \to \text{OCO}, \\
+&\text{DCI, DS} \to \text{DCO}, \\
+&\text{OCI, OS, DCI, DS} \to \text{TP}, \\
+&\text{PT} \to \text{CAP}
+\end{align*}
+
+\noindent\textbf{Check for redundant FDs:}
+
+\begin{itemize}
+  \item $\text{FN} \to \text{TP}$: Can we derive TP from FN without this FD? $\text{FN} \to \text{OC} \to \text{OCI, OS}$ and $\text{FN} \to \text{DC} \to \text{DCI, DS}$, then $\text{OCI, OS, DCI, DS} \to \text{TP}$. Yes! So $\text{FN} \to \text{TP}$ is \textbf{redundant -- remove}.
+\end{itemize}
+
+All other FDs are essential (removing any of them would lose information since they involve attributes that can't be derived another way).
+
+\medskip
+\noindent\textbf{Check for extraneous attributes on left sides:}
+
+The multi-attribute left sides are $\{\text{OCI, OS}\}$, $\{\text{DCI, DS}\}$, and $\{\text{OCI, OS, DCI, DS}\}$.
+
+\begin{itemize}
+  \item $\text{OCI, OS} \to \text{OCO}$: Is OCI extraneous? Would $\text{OS} \to \text{OCO}$? A state alone doesn't determine a country (e.g., ``Georgia'' is both a US state and a country). Keep both.
+  \item $\text{DCI, DS} \to \text{DCO}$: Same reasoning. Keep both.
+  \item $\text{OCI, OS, DCI, DS} \to \text{TP}$: Is any attribute extraneous? Removing OCI: $\{\text{OS, DCI, DS}\}^+ = \{\text{OS, DCI, DS, DCO}\}$ -- can't reach TP. Removing OS: $\{\text{OCI, DCI, DS}\}^+ = \{\text{OCI, DCI, DS, DCO}\}$ -- can't reach TP. By symmetry, removing DCI or DS also fails. Keep all four.
+\end{itemize}
+
+\medskip
+\noindent\textbf{Canonical cover:}
+\[
+\boxed{F_c = \left\{\begin{array}{l}
+\text{FN} \to \text{AN, OC, DC, DT, DU, PT}, \\
+\text{OC} \to \text{OCI, OS},\quad \text{DC} \to \text{DCI, DS}, \\
+\text{OCI, OS} \to \text{OCO},\quad \text{DCI, DS} \to \text{DCO}, \\
+\text{OCI, OS, DCI, DS} \to \text{TP},\quad \text{PT} \to \text{CAP}
+\end{array}\right\}}
+\]
+
+%-----------------------------------------------------------------------------
+\subsection{(e) BCNF Check and Decomposition}
+
+The only candidate key is $\{\text{FN}\}$. For BCNF, every non-trivial FD must have a superkey on the left side.
+
+\begin{itemize}
+  \item $\text{FN} \to \ldots$: FN is a superkey. OK.
+  \item $\text{OC} \to \text{OCI, OS}$: OC is not a superkey. \textbf{Violates BCNF.}
+  \item (Similarly DC $\to$ DCI, DS; OCI,OS $\to$ OCO; DCI,DS $\to$ DCO; OCI,OS,DCI,DS $\to$ TP; PT $\to$ CAP all violate BCNF.)
+\end{itemize}
+
+\textbf{The schema is NOT in BCNF.}
+
+\medskip
+\noindent\textbf{BCNF Decomposition:}
+
+I'll decompose step by step, each time picking a violating FD.
+
+\medskip
+\noindent\textbf{Round 1:} $\text{OC} \to \text{OCI, OS}$ violates BCNF.
+\begin{itemize}
+  \item $R_1 = \{\text{OC, OCI, OS}\}$, key: OC. But we also have OCI, OS $\to$ OCO... OCO isn't in $R_1$ yet. Actually, I'll handle OCO in a later step. $R_1$ is in BCNF.
+  \item Remaining: remove OCI, OS from main schema (keep OC as FK reference).
+\end{itemize}
+
+\noindent\textbf{Round 2:} $\text{OCI, OS} \to \text{OCO}$ -- but OCI and OS were moved to $R_1$. So we add OCO to $R_1$. Actually, let me reconsider and do the decomposition more carefully.
+
+\medskip
+Let me approach this differently by directly giving the natural BCNF decomposition:
+
+\begin{itemize}
+  \item $R_1 = \{\text{OC, OCI, OS, OCO}\}$ with FDs $\{\text{OC} \to \text{OCI, OS};\; \text{OCI, OS} \to \text{OCO}\}$. \\
+  Key: OC. Check: OCI, OS $\to$ OCO -- is $\{$OCI, OS$\}$ a superkey? $\{$OCI, OS$\}^+ = \{$OCI, OS, OCO$\}$, missing OC. Violates BCNF!
+\end{itemize}
+
+So I need to further decompose $R_1$:
+\begin{itemize}
+  \item $R_{1a} = \{\text{OC, OCI, OS}\}$, FD: $\text{OC} \to \text{OCI, OS}$. Key: OC. BCNF. \checkmark
+  \item $R_{1b} = \{\text{OCI, OS, OCO}\}$, FD: $\text{OCI, OS} \to \text{OCO}$. Key: $\{$OCI, OS$\}$. BCNF. \checkmark
+\end{itemize}
+
+By the same logic for destination:
+\begin{itemize}
+  \item $R_{2a} = \{\text{DC, DCI, DS}\}$, FD: $\text{DC} \to \text{DCI, DS}$. Key: DC. BCNF. \checkmark
+  \item $R_{2b} = \{\text{DCI, DS, DCO}\}$, FD: $\text{DCI, DS} \to \text{DCO}$. Key: $\{$DCI, DS$\}$. BCNF. \checkmark
+\end{itemize}
+
+Next: $\text{PT} \to \text{CAP}$:
+\begin{itemize}
+  \item $R_3 = \{\text{PT, CAP}\}$, FD: $\text{PT} \to \text{CAP}$. Key: PT. BCNF. \checkmark
+\end{itemize}
+
+Next: $\text{OCI, OS, DCI, DS} \to \text{TP}$:
+\begin{itemize}
+  \item $R_4 = \{\text{OCI, OS, DCI, DS, TP}\}$, FD: $\text{OCI, OS, DCI, DS} \to \text{TP}$. Key: $\{$OCI, OS, DCI, DS$\}$. BCNF. \checkmark
+\end{itemize}
+
+Remaining attributes with FN:
+\begin{itemize}
+  \item $R_5 = \{\text{FN, AN, OC, DC, DT, DU, PT}\}$, FD: $\text{FN} \to \text{AN, OC, DC, DT, DU, PT}$. Key: FN. All determined by superkey. BCNF. \checkmark
+\end{itemize}
+
+\medskip
+\noindent\textbf{Final BCNF decomposition:}
+\[
+\boxed{\begin{array}{ll}
+R_{1a} = \{\text{OC, OCI, OS}\} & \text{key: OC} \\
+R_{1b} = \{\text{OCI, OS, OCO}\} & \text{key: \{OCI, OS\}} \\
+R_{2a} = \{\text{DC, DCI, DS}\} & \text{key: DC} \\
+R_{2b} = \{\text{DCI, DS, DCO}\} & \text{key: \{DCI, DS\}} \\
+R_3 = \{\text{PT, CAP}\} & \text{key: PT} \\
+R_4 = \{\text{OCI, OS, DCI, DS, TP}\} & \text{key: \{OCI, OS, DCI, DS\}} \\
+R_5 = \{\text{FN, AN, OC, DC, DT, DU, PT}\} & \text{key: FN}
+\end{array}}
+\]
+
+Each decomposition step follows the standard BCNF algorithm (splitting on a violating FD where the common attributes form a key of one piece), which guarantees lossless-join decomposition at every step.
+
+\medskip
+Note: $R_{1a}$/$R_{1b}$ and $R_{2a}$/$R_{2b}$ represent the same real-world entity (Airport) split into two tables. In practice, since origin and destination airports follow the same constraints, they'd reference the same Airport and CityCountry tables -- but in the formal decomposition we treat them separately because the original schema had separate columns.
+
+%-----------------------------------------------------------------------------
+\subsection{(f) Dependency Preservation}
+
+Check each FD in $F_c$:
+\begin{itemize}
+  \item $\text{FN} \to \text{AN, OC, DC, DT, DU, PT}$: all in $R_5$. \checkmark
+  \item $\text{OC} \to \text{OCI, OS}$: all in $R_{1a}$. \checkmark
+  \item $\text{DC} \to \text{DCI, DS}$: all in $R_{2a}$. \checkmark
+  \item $\text{OCI, OS} \to \text{OCO}$: all in $R_{1b}$. \checkmark
+  \item $\text{DCI, DS} \to \text{DCO}$: all in $R_{2b}$. \checkmark
+  \item $\text{PT} \to \text{CAP}$: all in $R_3$. \checkmark
+  \item $\text{OCI, OS, DCI, DS} \to \text{TP}$: all in $R_4$. \checkmark
+\end{itemize}
+
+\textbf{Yes, this BCNF decomposition is dependency-preserving.} All FDs from the canonical cover can be checked within a single relation. No 3NF conversion is needed.
+
+%-----------------------------------------------------------------------------
+\subsection{(g) Adding Rule (vii): Same Airports $\Rightarrow$ Same Duration}
+
+The new assumption states: any flights between the same airports must have the same duration. This gives us a new FD:
+\[
+\text{OC, DC} \to \text{DU}
+\]
+
+\noindent\textbf{Impact on (b) -- Functional Dependencies:}
+
+We add $\text{OC, DC} \to \text{DU}$ to $F$. Now $\text{FN} \to \text{DU}$ becomes redundant because $\text{FN} \to \text{OC, DC}$ and $\text{OC, DC} \to \text{DU}$.
+
+Updated canonical cover:
+\[
+F_c' = \left\{\begin{array}{l}
+\text{FN} \to \text{AN, OC, DC, DT, PT}, \\
+\text{OC} \to \text{OCI, OS},\quad \text{DC} \to \text{DCI, DS}, \\
+\text{OCI, OS} \to \text{OCO},\quad \text{DCI, DS} \to \text{DCO}, \\
+\text{OCI, OS, DCI, DS} \to \text{TP},\quad \text{PT} \to \text{CAP}, \\
+\text{OC, DC} \to \text{DU}
+\end{array}\right\}
+\]
+
+\noindent\textbf{Impact on (c) -- Candidate Keys:}
+
+No change -- FN is still the only candidate key. The new FD doesn't help any other attribute set reach FN.
+
+\noindent\textbf{Impact on (d) -- Canonical Cover:}
+
+As shown above, we drop DU from $\text{FN} \to \ldots$ and add $\text{OC, DC} \to \text{DU}$.
+
+\noindent\textbf{Impact on (e) -- BCNF Decomposition:}
+
+$\text{OC, DC} \to \text{DU}$ violates BCNF (OC, DC is not a superkey). We need a new relation and DU gets removed from $R_5$:
+
+\begin{itemize}
+  \item $R_6 = \{\text{OC, DC, DU}\}$, key: $\{$OC, DC$\}$. BCNF. \checkmark
+  \item $R_5' = \{\text{FN, AN, OC, DC, DT, PT}\}$, key: FN. BCNF. \checkmark
+\end{itemize}
+
+Everything else stays the same. We now have 8 relations: $R_{1a}, R_{1b}, R_{2a}, R_{2b}, R_3, R_4, R_5', R_6$.
+
+\noindent\textbf{Impact on (f) -- Dependency Preservation:}
+
+$\text{OC, DC} \to \text{DU}$ is fully contained in $R_6$, so the decomposition remains dependency-preserving. Still no need for 3NF.
+
+
+%=============================================================================
+% PROBLEM 4
+%=============================================================================
+\section{Metadata Queries}
+
+All queries use the PostgreSQL \texttt{information\_schema} and system catalogs, operating on the airline database from Problem 1 (same schema used in HW2).
+
+%-----------------------------------------------------------------------------
+\subsection{(a) Tables with $\geq 2$ Outgoing Foreign Keys to Distinct Tables}
+
+\begin{lstlisting}
+SELECT tc.table_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.referential_constraints rc
+  ON tc.constraint_name = rc.constraint_name
+JOIN information_schema.table_constraints tc2
+  ON rc.unique_constraint_name = tc2.constraint_name
+WHERE tc.constraint_type = 'FOREIGN KEY'
+  AND tc.table_schema = 'public'
+GROUP BY tc.table_name
+HAVING COUNT(DISTINCT tc2.table_name) >= 2;
+\end{lstlisting}
+
+This joins the constraint metadata to find, for each table, how many \textit{distinct} referenced tables its foreign keys point to, then keeps only those with at least 2.
+
+%-----------------------------------------------------------------------------
+\subsection{(b) Columns with Timestamp/Date Types}
+
+\begin{lstlisting}
+SELECT table_name, column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND data_type IN ('date', 'timestamp without time zone',
+                    'timestamp with time zone',
+                    'time without time zone',
+                    'time with time zone',
+                    'interval')
+ORDER BY table_name, ordinal_position;
+\end{lstlisting}
+
+%-----------------------------------------------------------------------------
+\subsection{(c) Distinct Values per Attribute in the Flight Table}
+
+\begin{lstlisting}
+SELECT 'flight_number' AS attribute,
+       COUNT(DISTINCT flight_number) AS distinct_count
+FROM Flight
+UNION ALL
+SELECT 'departure_date', COUNT(DISTINCT departure_date)
+FROM Flight
+UNION ALL
+SELECT 'plane_type', COUNT(DISTINCT plane_type)
+FROM Flight;
+\end{lstlisting}
+
+Since the Flight table only has three columns, I list them explicitly. Each row counts the distinct values for one attribute.
+
+%-----------------------------------------------------------------------------
+\subsection{(d) Tables with Composite Primary Keys}
+
+\begin{lstlisting}
+SELECT tc.table_name
+FROM information_schema.table_constraints tc
+JOIN information_schema.key_column_usage kcu
+  ON tc.constraint_name = kcu.constraint_name
+WHERE tc.constraint_type = 'PRIMARY KEY'
+  AND tc.table_schema = 'public'
+GROUP BY tc.table_name
+HAVING COUNT(kcu.column_name) > 1;
+\end{lstlisting}
+
+This counts how many columns participate in each primary key constraint and keeps those with more than one.
+
+%-----------------------------------------------------------------------------
+\subsection{(e) Attributes Containing the Substring ``name''}
+
+\begin{lstlisting}
+SELECT table_name, column_name
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND column_name LIKE '%name%'
+ORDER BY table_name, column_name;
+\end{lstlisting}
+
+\end{document}

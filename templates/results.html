@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Search Results</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 { color: #333; }
+        .subtitle { color: #666; margin-bottom: 20px; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            padding: 10px 14px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th { background: #57068c; color: white; }
+        tr:hover { background: #f0e6f6; }
+        a { color: #57068c; text-decoration: none; font-weight: bold; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-top: 20px; }
+        .no-results {
+            padding: 30px;
+            text-align: center;
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Flight Results</h1>
+    <p class="subtitle">{{ origin }} &rarr; {{ dest }} | {{ start_date }} to {{ end_date }}</p>
+
+    {% if flights %}
+    <table>
+        <tr>
+            <th>Flight #</th>
+            <th>Departure Date</th>
+            <th>Origin</th>
+            <th>Destination</th>
+            <th>Departure Time</th>
+        </tr>
+        {% for f in flights %}
+        <tr>
+            <td>
+                <a href="/flight/{{ f[0] }}/{{ f[1] }}">{{ f[0] }}</a>
+            </td>
+            <td>{{ f[1] }}</td>
+            <td>{{ f[2] }}</td>
+            <td>{{ f[3] }}</td>
+            <td>{{ f[4] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+    {% else %}
+    <div class="no-results">No flights found for this route and date range.</div>
+    {% endif %}
+
+    <a class="back" href="/">&larr; New Search</a>
+</body>
+</html>

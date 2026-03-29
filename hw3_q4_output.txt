@@ -1,0 +1,34 @@
+ table_name 
+------------
+ booking
+ flight
+(2 rows)
+
+  table_name   |  column_name   |       data_type        
+---------------+----------------+------------------------
+ booking       | departure_date | date
+ flight        | departure_date | date
+ flightservice | departure_time | time without time zone
+ flightservice | duration       | interval
+(4 rows)
+
+   attribute    | distinct_count 
+----------------+----------------
+ flight_number  |             10
+ departure_date |              3
+ plane_type     |              4
+(3 rows)
+
+ table_name 
+------------
+ booking
+ flight
+(2 rows)
+
+  table_name   |  column_name   
+---------------+----------------
+ airport       | name
+ flightservice | airline_name
+ passenger     | passenger_name
+(3 rows)
+

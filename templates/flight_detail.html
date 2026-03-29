@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Flight {{ flight_number }} Details</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+        h1 { color: #333; }
+        .card {
+            background: #f5f5f5;
+            padding: 25px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .card p { margin: 8px 0; font-size: 16px; }
+        .label { font-weight: bold; color: #555; }
+        .seats {
+            font-size: 22px;
+            margin-top: 15px;
+            padding: 15px;
+            background: #e8f5e9;
+            border-radius: 6px;
+            text-align: center;
+        }
+        .seats.full { background: #ffebee; }
+        a { color: #57068c; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .back { display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Flight {{ flight_number }}</h1>
+
+    <div class="card">
+        <p><span class="label">Airline:</span> {{ info[3] }}</p>
+        <p><span class="label">Route:</span> {{ info[0] }} &rarr; {{ info[1] }}</p>
+        <p><span class="label">Date:</span> {{ departure_date }}</p>
+        <p><span class="label">Departure Time:</span> {{ info[2] }}</p>
+        <p><span class="label">Aircraft:</span> {{ info[4] }}</p>
+
+        <div class="seats {% if available == 0 %}full{% endif %}">
+            <strong>{{ available }}</strong> seats available out of <strong>{{ capacity }}</strong>
+            <br>
+            <small>({{ booked }} booked)</small>
+        </div>
+    </div>
+
+    <a class="back" href="javascript:history.back()">&larr; Back to Results</a>
+</body>
+</html>
